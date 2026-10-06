@@ -1,0 +1,556 @@
+---
+title: "Assessment02: Part I: Processing Fuel Prices Data"
+subtitle: "DSB100 - Fundamentals of Data Science"
+author: "Student name and id: replace with your name and student id, eg Adam Smith, n12345678 "
+date: "October 2026"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      toc_collapsed: true
+    toc_depth: 3
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+options(width = 90)
+knitr::opts_chunk$set(echo = TRUE, comment = NA, eval = TRUE)
+knitr::opts_chunk$set(fig.width = 4.8, fig.height = 3.6)
+options(dplyr.summarise.inform = FALSE, tidyverse.quiet = TRUE, width = 120)
+```
+
+# About this assessment
+
+This assessment is about working with and making sense of data using R
+and fundamental concepts in probability, statistics and visualisation.
+
+It requires you:
+
+- to write and execute code to explore and manipulate data
+- to explain things about data, working with data, and data ethics
+- to figure things out, including by consulting appropriate sources.
+
+Please check Canvas for more information about this assessment,
+including:
+
+- [Instructions](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-instructions "Instructions")
+- [When this Assessment is
+  due](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-instructions "Due date")
+- [Use of AI and other resources in this
+  Assessment](https://canvas.qut.edu.au/courses/23983/pages/assessment-policy "AI Policy")
+- [How will we run and mark your
+  submission](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-marking "Assessment 2: Marking")
+- [Errors and corrections to this
+  Assessment](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-errata "Assessment 2: Errata").
+
+------------------------------------------------------------------------
+
+# Part I: Processing fuel prices data (30 marks total)
+
+In this part of the assessment, you will be processing fuel prices data
+across Queensland. The data file, `fuel_prices_july.csv`, contains the
+average fuel prices recorded across a number of petrol stations across
+Queensland.
+
+The dataset contains the following columns:
+
+- `site_id`: a unique ID code identifying the site
+- `site_brand`: the brand of the petrol station
+- `site_suburb`: suburb name for the location of the site
+- `site_state`: state name for the location of the site
+- `fuel_type`: the type of the fuel recorded for the entry
+- `price`: the price of fuel, given in units of 1/10 cent. e.g., 2321
+  means \$2.321. An entry of 9999 is used to indicate a missing value.
+
+**Note:** The dataset is adapted from the fuel prices recorded by the
+Queensland government treasury. The entries have been pre-processed from
+its raw format, and randomised to remove identification. Brand names
+have also been changed to fictional ones. More details about the
+original dataset can be found
+[here](https://www.data.qld.gov.au/dataset/fuel-price-reporting-2026),
+which is published under a [CC BY
+4.0](https://creativecommons.org/licenses/by/4.0/) license. But do not
+use the manual for the original dataset in this assessment since several
+conventions have been changed from the original dataset.
+
+## Task and instructions
+
+Your task is to do some initial processing and visualisation of the data
+and conduct hypothesis tests to statistically answer some questions of
+interest around the differences and associations in fuel prices.
+
+This is broken down into the sequence of tasks listed below, which
+largely follows a typical workflow. These questions involve a
+combination of writing code and word responses. For each question,
+please write your answer under the `Answer` heading provided. Any
+required code is to be written within the R code blocks provided, and
+any required word responses are to be written in the plain text blocks
+provided.
+
+Please do not add additional response blocks for either code or text.
+
+## Clean start
+
+```{r clean-start, class.source="bg-success"}
+rm(list = ls())
+```
+
+## Load only the specified libraries
+
+```{r load-libraries, warning=FALSE, message=FALSE, class.source="bg-success"}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(readr)
+```
+
+## Load the dataset
+
+```{r load-data, class.source="bg-success"}
+fuel_prices_raw <- read_csv("data/fuel_prices_july.csv")
+```
+
+------------------------------------------------------------------------
+
+# Question I.1 (6 marks): Processing the data
+
+Before we start any analysis, let's take a look at the data.
+
+## Question I.1.1 (1 mark)
+
+Looking at the `fuel_prices_raw` tibble, answer the following:
+
+- How many fuel price entries were recorded across the entire dataset?
+- What variable type is each column in the tibble stored as?
+
+### Answer I.1.1
+
+```{r QI.1.1-code}
+# Write your code here
+nrow(fuel_prices_raw)
+
+for (col in colnames(fuel_prices_raw)) {
+  print(sprintf("%s data type: %s", col, typeof(fuel_prices_raw[[col]])))
+}
+```
+
+```{asis QI.1.1-text}
+there are 2346 fuel price entries across the entire dataset. 
+
+the data type for each column is stored as the following: 
+[1] "site_id data type: double"
+[1] "site_brand data type: character"
+[1] "site_suburb data type: character"
+[1] "site_state data type: character"
+[1] "fuel_type data type: character"
+[1] "price data type: double"
+
+```
+
+## Question I.1.2 (1 mark)
+
+Make a plot with each fuel price entry in `fuel_prices_raw` as a point
+on the plot. Use the `price` variable for the `x` axis and the
+`fuel_type` variable as the `y` axis. Remember to use jitter and
+transparency to remedy the overplotting.
+
+### Answer I.1.2
+
+```{r QI.1.2-code}
+ggplot(data=fuel_prices_raw, aes(x=price, y=fuel_type)) +
+  geom_jitter(alpha=0.5) +
+  labs(
+    title = "Price of Each Fuel Type",
+    x = "Price ($)",
+    y = "Fuel Type"
+  )
+
+```
+
+## Question I.1.3 (1 mark)
+
+Based on your plot from above, comment on the following:
+
+- Are there any prices recorded as 9999? (Remember that these are used
+  to indicate a missing entry in the dataset.)
+- Are there any other outliers?
+
+### Answer I.1.3
+
+```{asis QI.1.3-text}
+Write your response here in plain text
+
+```
+
+## Question I.1.4 (2 marks)
+
+We will convert any invalid entries into `NA` to properly indicate that
+they are indeed invalid. In addition, prices that are too low (e.g.,
+less than \$0.5) are likely incorrect entries.
+
+Process the existing `fuel_prices_raw` tibble to:
+
+- Replace any entries of `price` that are equal to `9999` with `NA`.
+- Replace any entries of `price` that are less than `500` with `NA`.
+
+Assign this to a new tibble `fuel_prices`.
+
+**Important:** We will work with the processed data in `fuel_prices`
+instead of the raw dataset `fuel_prices_raw` from now on, so check your
+pre-processing by running the following two lines of code:
+
+- `sum(is.na(fuel_prices$price))`
+- `mean(fuel_prices$price, na.rm=TRUE)`
+
+and compare your summaries against these:
+
+```         
+> sum(is.na(fuel_prices$price))
+[1] 15
+
+> mean(fuel_prices$price, na.rm=TRUE)
+[1] 1938.349
+```
+
+Provide a quick explanation of what each line of the provided summary
+code does.
+
+### Answer I.1.4
+
+```{r QI.1.4-code}
+# Write your code here
+
+# Uncomment this to confirm your summaries
+# sum(is.na(fuel_prices$price))
+# mean(fuel_prices$price, na.rm=TRUE)
+```
+
+```{asis QI.1.4-text}
+Write your response here in plain text
+
+```
+
+## Question I.1.5 (1 mark)
+
+Make a new tibble of your `fuel_prices` dataset (the cleaned up one) by
+converting it into wide format where each `fuel_type` is in its own
+column. Assign this to a tibble called `fuel_type_wide`.
+
+That is, the tibble should look something like
+
+| `site_id` | `site_brand` | `site_suburb` | `Diesel` | `PULP 98 RON` | ... |
+|:---------:|:------------:|:-------------:|:--------:|:--------------|:---:|
+|  XXXXXXX  |  XXXXXXXXXX  |  XXXXXXXXXXX  |  XXXXXX  | XXXXXXXXXXX   | ... |
+
+Retain all the `NA` values from the `fuel_prices` dataset.
+
+Hint: look into `pivot_wider`.
+
+### Answer I.1.5
+
+```{r QI.1.5-code}
+# Write your code here
+
+```
+
+------------------------------------------------------------------------
+
+# Question I.2 (10 marks): Exploring the data
+
+Now that you have cleaned up the data, and have them configured in both
+the longer and wider formats (`fuel_prices` and `fuel_prices_wider`), we
+now proceed to explore the datasets.
+
+## Question I.2.1 (2 marks)
+
+Write some code to answer the following questions:
+
+- Which petrol station in Queensland had the highest Unleaded price?
+- Which petrol station in Queensland had the lowest Diesel price?
+
+State both answers in terms of their site ID and suburb.
+
+### Answer I.2.1
+
+```{r QI.2.1-code}
+# Write your code here 
+
+```
+
+```{asis QI.2.1-text}
+Write your response here in plain text
+
+```
+
+## Question I.2.2 (2 marks)
+
+Generate the following summary statistics for Unleaded fuel for each
+`site_brand`:
+
+- Mean
+- Standard deviation
+- First quartile (Q1)
+- Median
+- Third quartile (Q3)
+
+Briefly compare the brands `Velora` and `AG` in terms of their central
+tendency and spread in two or three sentences.
+
+### Answer I.2.2
+
+```{r Q2.2}
+# Write your code here 
+
+```
+
+```{asis QI.2.2-text}
+Write your response here in plain text
+
+```
+
+## Question I.2.3 (2 marks)
+
+To better understand the differences, create histograms of `price` for
+Unleaded fuel for each brand. Facet the histograms by `site_brand` in a
+way that they have the same scale for the x-axis for easier comparison.
+Use an informative name for the x-axis. Remember to try a few different
+bins/binwidth settings and find an appropriate one for this dataset
+
+### Answer I.2.3
+
+```{r QI.2.3-code}
+# Write your code here
+
+```
+
+## Question I.2.4 (1 mark)
+
+Make violin plots of `price` on the x-axis separated by `fuel_type` in
+the y-axis and overlay semi-transparent jittered points. Note: you might
+want to experiment with some different heights and transparency settings
+of the jitter as to not obscure the violin plot.
+
+### Answer I.2.4
+
+```{r QI.2.4-code}
+# Write your code here 
+
+```
+
+## Question I.2.5 (1 mark)
+
+How many entries recorded Unleaded fuel prices of 200 cents or more?
+What is this number as a proportion of the total number of Unleaded fuel
+price entries?
+
+### Answer I.2.5
+
+```{r QI.2.5-code}
+# Write your code here
+
+```
+
+```{asis QI.2.5-text}
+Write your response here in plain text
+```
+
+## Question I.2.6 (2 marks)
+
+Using the wider format data, `fuel_prices_wider`, plot the Unleaded
+versus Diesel data, with Unleaded prices on the x-axis and Diesel prices
+on the y-axis. Use informative axis labels.
+
+Briefly comment on the correlation between the prices in one or two
+sentences.
+
+### Answer I.2.6
+
+```{r QI.2.6-code}
+# Write your code here 
+
+```
+
+```{asis QI.2.6-text}
+Write your response here in plain text
+```
+
+------------------------------------------------------------------------
+
+# Question I.3 (7 marks): Comparing prices between brands
+
+We want to know if the fuel brand `Velora` tends to have lower Unleaded
+fuel prices compared to another brand `AG`. This does seem to be the
+case based on the exploratory analyses above. To make this comparison
+more precise, we will conduct a one-tailed t-test to see if the average
+Unleaded prices of Velora are indeed lower than AG.
+
+## Question I.3.1 (2 marks)
+
+Briefly explain the following:
+
+- What does the t-test aim to compare?
+- Why is a one-tailed test needed?
+- Would our test be a one-sample or two-sample test?
+- Why is Welch's t-test useful for this dataset?
+
+### Answer I.3.1
+
+```{asis QI.3.1-text}
+Write your response here in plain text
+
+```
+
+## Question I.3.2 (1 mark)
+
+Create two numeric vectors: Unleaded prices for Velora and Unleaded
+prices for AG.
+
+### Answer I.3.2
+
+```{r Question I.3.2}
+# Write your code here
+
+```
+
+## Question I.3.3 (2 marks)
+
+Using the t-test:
+
+- Write H0 and H1.
+- State the exact test that you're doing (refer to your response in Q
+  I.3.1)
+- Run the test in R.
+
+Make sure the test you're doing matches your R code.
+
+### Answer I.3.3
+
+```{asis QI.3.3-text}
+Write your response here in plain text
+
+```
+
+```{r QI.3.3-code}
+# Write your code here
+
+```
+
+## Question I.3.4 (1 mark)
+
+Interpret the result from the test. What does the p-value imply about
+statistical significance in this fuel pricing context? Use one to three
+sentences.
+
+### Answer I.3.4
+
+```{asis QI.3.4-text}
+Write your response here in plain text
+
+```
+
+## Question I.3.5 (1 mark)
+
+By using the data in the manner above, we have treated each price entry
+as an independent observation. This is one of the main assumptions of
+the t-test.
+
+What is a reason why the fuel price entries are not actually independent
+observations? What is a potential consequence of this?
+
+### Answer I.3.5
+
+```{asis QI.3.5-text}
+Write your response here in plain text
+
+```
+
+------------------------------------------------------------------------
+
+# Question I.4 (6 marks): Linear regression modelling
+
+We also want to know if there is a relationship between Unleaded and
+Diesel prices. To make this more precise, we will look to fit a linear
+regression model.
+
+## Question I.4.1 (1 mark)
+
+Fit a linear regression model with:
+
+- Response variable: Diesel price
+- Predictor: Unleaded price
+
+Show a `summary()` for the model.
+
+### Answer I.4.1
+
+```{r QI.4.1-code}
+# Write your code here
+
+```
+
+## Question I.4.2 (1 mark)
+
+Explain in a few sentences what the value of the coefficient of
+`Unleaded` in the model means and how its $p$ value supports or
+contradicts your observation made in Question 2.6.
+
+### Answer I.4.2
+
+```{asis QI.4.2-text}
+Write your response here in plain text
+
+```
+
+## Question I.4.3 (3 mark)
+
+- Provide a QQ-plot of the model residuals along with the a line
+  corresponding to the diagonal (QQ-line)
+- Describe what the plot shows in relation to the assumptions that
+  underpin linear regression models.
+- Discuss whether any transformation of the response variable is
+  warranted.
+
+### Answer I.4.3
+
+```{r QI.4.3-code}
+# Write your code here
+
+```
+
+```{asis QI.4.3-text}
+Write your response here in plain text
+```
+
+## Question I.4.4 (1 mark)
+
+Does your result support the claim that "Unleaded prices *impact* Diesel
+prices in Queensland"? Why/why not?
+
+### Answer I.4.4
+
+```{asis QI.4.4-text}
+Write your response here in plain text.
+
+```
+
+------------------------------------------------------------------------
+
+# Question I.5 (1 mark): Working reproducibly
+
+Follow the reproducible practices covered in the unit (see the Unit
+Canvas page on this topic and the recommended textbook).
+
+Your submission must:
+
+- have a separate file for each part (this is part I, so it should be
+  named `Assessment02_Part1.Rmd`)
+- render to HTML without error by the Teaching Team;
+- use clear code, informative comments, and readable plots;
+- avoid hidden dependencies and hard-coded local paths.
+
+------------------------------------------------------------------------
+
+# End of Part I

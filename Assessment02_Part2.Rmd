@@ -1,0 +1,599 @@
+---
+title: "Assessment02 Part II: Modelling sports performance"
+subtitle: "DSB100 - Fundamentals of Data Science"
+author: "Student name and id: replace with your name and student id, eg Adam Smith, n12345678 "
+date: "October 2026"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      toc_collapsed: true
+    toc_depth: 3
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+options(width = 90)
+knitr::opts_chunk$set(echo = TRUE, comment = NA, eval = TRUE)
+knitr::opts_chunk$set(fig.width = 4.8, fig.height = 3.6)
+options(dplyr.summarise.inform = FALSE, tidyverse.quiet = TRUE, width = 120)
+```
+
+# About this assessment
+
+This assessment is about working with and making sense of data using R
+and fundamental concepts in probability, statistics, modelling, and visualisation.
+It requires you:
+
+- to write and execute code to explore and manipulate data
+- to explain things about data, working with data, and data ethics
+- to figure things out, including by consulting appropriate sources.
+
+Please check Canvas for more information about this assessment,
+including:
+
+- [Instructions](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-instructions "Instructions")
+- [When this Assessment is due](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-instructions "Due date")
+- [Use of AI and other resources in this Assessment](https://canvas.qut.edu.au/courses/23983/pages/assessment-policy "AI Policy")
+- [How will we run and mark your submission](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-marking "Assessment 2: Marking")
+- [Errors and corrections to this Assessment](https://canvas.qut.edu.au/courses/23983/pages/assessment-2-errata "Assessment 2: Errata").
+
+------------------------------------------------------------------------
+
+# Part II: Modelling athlete performance (30 marks total)
+
+With Brisbane 2032 on the horizon, many are interested in helping
+athletes improve performance. In this part of the assessment, you will
+analyse a dataset based on measurements of adolescent tennis players.
+The aim of the analysis is to understand the following question:
+how can biological measurements be used to predict sporting performance?
+
+To this end, a hypothetical study collected data from 286 participants consisting of 
+young tennis players in between the ages of 11-16. Consent for the collection and use 
+of their data for this analysis was provided by the participants and their legal guardians.
+
+The data collected include biological data such as:
+
+- `sex`: participant's biological sex
+- `height`: participant's height in cm 
+- `body_weight`: participant's body weight in kg 
+- `fat_mass`: participant's fat mass in kg 
+- `lean_mass`: participant's lean mass in kg 
+
+growth related variables such as:
+
+- `years_from_phv`: number of years participant is from their peak height velocity (fastest growing period).
+   This is a measure of growth stage, with positive number meaning they are $x$ years past their growth spurt
+  and negative numbers meaning they are $x$ years before their growth spurt. 
+- `bone_age`: participant's bone age in years. This measures the maturity of their bones. 
+- `bone_mineral_density`: participant's bone mineral density in g/cm^3 
+- `bone_mineral_content`: participant's in g
+
+The study also tested their upper and lower body performance in terms of their:
+
+- `vertical_jump`: test result for vertical jump task (cm)
+- `upper_body_strength`: test result for upper body strength task (cm)
+- `hand_grip`: test result for hand grip strength task (kgf)
+
+Finally, a follow-up on this study recorded whether the participants later
+went on to win a medal at a regional level tournament (or above) by age 18.
+This is recorded in the medal success variable, 
+
+- `medal`: Whether or not the participant went on to win a medal (`"yes"` or `"no"`)
+
+**Note:** The dataset provided is synthetic and was generated based on the 
+summary statistics reported by [Almeida-Neto et al. (2021)](https://doi.org/10.1371/journal.pone.0254552).
+The `medal` outcome is a teaching scenario rather than an observed outcome from that study.
+You are welcome to read the original paper, with its original dataset published 
+[here](https://figshare.com/articles/dataset/Raw_Data_xlsx/14755077) under
+the [CC BY 40](https://creativecommons.org/licenses/by/4.0/) license.
+
+## Task and Instructions
+
+Your task is to do some initial processing and visualisation of the
+data, and then performing regression and classification modelling to see
+if the biological measurements are useful in predicting performance and medal
+success. 
+
+This is broken down into the sequence of questions listed below, which
+largely follows a typical workflow. These questions involve a combination of 
+writing code and word responses.
+For each question, please write your answer
+under the `Answer` heading provided. Code is to be written within the R code 
+blocks provided, and word responses are to be written in the plain text blocks
+provided. Please do not add additional response blocks for either code or text.
+
+## Clean start
+
+```{r clean-start, class.source="bg-success"}
+rm(list = ls())
+```
+
+## Load only the specified libraries
+
+```{r load-libraries, warning=FALSE, message=FALSE, class.source="bg-success"}
+library(ggplot2)
+library(GGally)
+library(tidyr)
+library(dplyr)
+library(readr)
+library(caret)
+library(rpart.plot)
+```
+
+## Load the dataset
+
+```{r load-data, class.source="bg-success"}
+sports_data_raw <- read_csv("data/sports_data.csv")
+```
+
+------------------------------------------------------------------------
+
+# Question II.1 Processing and Linear Regression Modelling (7 marks)
+
+We begin by exploring whether biological measurement can predict performance 
+metrics such as the `vertical_jump`, `upper_body_strength`, or `hand_grip` 
+of a tennis player. We first start with some basic exploration of the data.
+
+## Question II.1.1 (1 mark)
+
+Do these tasks in the following order: 
+
+
+1. List all the column headings of the raw dataset `sports_data_raw` and print out a few rows.
+
+2. Update the `medal` column of the dataset to use a factor type instead of a character type.
+  Use the levels `c("no", "yes")`, with `"no"` being the first entry. 
+  
+3. Store this resulting dataset in a new tibble `sports_data`.
+
+
+**Note:** We will use the new tibble `sports_data` in the following questions
+instead of the raw data `sports_data_raw`. 
+The ordering of the factor levels as `c("no", "yes")` is important
+in the definition of the logistic regression model in Question 2. This ordering
+ensures that the logistic regression model predicts the probability of medal
+success (`yes`). 
+
+To make sure you have the correct order, run the following check
+
+```
+levels(sports_data$medal)
+```
+and ensure you get `"no"` before `"yes"`. 
+
+### Answer II.1.1
+
+```{r QII.1.1-code}
+# Write your code here 
+
+# Uncomment the following line to check factor levels
+# levels(sports_data$medal)
+```
+
+
+## Question II.1.2 (2 marks)
+
+Using the `ggpairs` package, plot pairwise scatter plots of the following columns
+
+- `height`
+- `body_weight`
+- `lean_mass`
+- `fat_mass`
+- `years_from_phv`
+- `vertical_jump`
+- `upper_body_strength`
+- `hand_grip`
+
+Then comment on the association between the following pairs of variables:
+
+- `height` and `body_weight` (example showing how body measurements are related)
+- `vertical_jump` and `upper_body_strength` (example showing how strength measurements are related)
+- `lean_mass` and `hand_grip` (example showing how body and strength measurements are related)
+
+**Note**: A default figure size setting for pairwise scatter plots has been set 
+for you, but you are welcome to play with the settings to find a nice visualisation.
+
+### Answer II.1.2
+
+```{r QII.1.2-code, fig.width=10, fig.height=8}
+# Write your code here
+
+```
+
+```{asis QII.1.2-text}
+Write your response here in plain text
+
+```
+
+## Question II.1.3 (2 marks)
+
+Let's focus on how biological data relates to the upper body strength.
+To do so, we will look to fit two linear models using `R`'s linear
+regression function `lm`.
+
+Start by fitting a first linear model (Model 1), which predicts `hand_grip` from:
+
+- `sex`
+- `years_from_phv`
+- `lean_mass`
+
+Then, summarise the fitted model and answer the following questions and
+explain your answer in terms of the model summary
+
+- How good is the model fit and how much unexplained variance is there?
+- In this model, which variables seem to have a significant impact on
+  the measured upper body strengths?
+
+### Answer II.1.3
+
+```{r QII.1.3-code}
+# Write your code here
+```
+
+```{asis QII.1.3-text}
+Write your response here in plain text
+```
+
+## Question II.1.4 (2 marks)
+
+Now fit a second linear regression model (Model 2) to predict `hand_grip`  
+from all of the other biological measurements + sex. That is,
+
+- `sex`
+- `height` 
+- `body_weight`
+- `fat_mass`
+- `lean_mass`
+- `years_from_phv`
+- `bone_age`
+- `bone_mineral_density`
+- `bone_mineral_content`
+
+Then summarise the fitted model and answer the following questions and
+explain your answer in terms of the model summary
+
+- How good is model fit compared to the first model (Model 1). Was more
+  variance explained?
+- What happened to the p-value of the `lean_mass` variable compared to Model 1?
+  Why do you think this happened?
+ 
+### Answer II.1.4 
+
+```{r QII.1.4-code}
+# Write your code here
+
+```
+
+
+```{asis QII.1.4-text}
+Write your response here in plain text
+
+```
+
+# Question II.2 Predicting medal success via logistic regression (10 marks)
+
+Let's now look to predict medal success based on the measured
+biological data and performance measures. We will try to fit logistic
+regression to classify whether a player will succeed in winning a medal
+by age 18 based on the predictors.
+
+## Question II.2.1 (2 marks)
+
+Using `facet_wrap`, make boxplots of each numeric variable. 
+Each subplot in the `facet_wrap` should have two boxplots with the x-axis showing
+the numeric variable and the y-axis showing whether or not they win a medal. 
+Use two different colors for the two different medal categories 
+(e.g., boxplot for `medal == yes` is blue and `medal == no` is red).
+
+Then, using these plots, decide if there is indeed some level of separation 
+in the measurements between the two medal groups.
+
+### Answer II.2.1
+
+```{r QII.2.1-code}
+# Write your code here
+
+```
+
+```{asis QII.2.1-text}
+Write your response here in plain text
+
+```
+
+## Question II.2.2 (1 mark)
+
+For each group of `sex = Male` and `sex = Female`, compute the number of 
+medal winners and present this as proportion of the total number of males/females.
+
+i.e., present the following numbers for the dataset
+
+- Number of male medal winners
+- Number of male medal winners / Total number of male participants 
+- Number of female medal winners
+- Number of female medal winners / Total number of female participants 
+
+Is there a significant difference between the proportions of male vs female medal winners?
+
+### Answer II.2.2
+
+```{r QII2.2-code}
+# Write your code here
+
+```
+
+```{asis QII.2.2-text}
+Write your response here in plain text
+```
+
+## Question II.2.3 (1 mark)
+
+Using the `createDataPartition` function, partition the full dataset to 
+have 80% as training data and 20% as testing. Store these separately. 
+For reproducibility, set the random seed to `111` before doing the partitioning
+using `set.seed(111)`
+
+### Answer II.2.3
+
+```{r QII.2.3-code}
+set.seed(111)
+# Write your code here
+
+```
+
+## Question II.2.4 (2 marks)
+
+On the training data only, fit two logistic regression models.
+
+Model 1: predict `medal` from current performance metrics only
+
+`medal` from `vertical_jump`, `upper_body_strength`, and `hand_grip`.
+
+Model 2: predict `medal` from all variables as predictors
+
+And print out their summaries.
+
+
+### Answer II.2.4
+
+```{r QII.2.4}
+# Write your code here 
+
+```
+
+## Question II.2.5 (1 mark)
+
+For each logistic regression model, using a threshold of 0.5, make
+predictions for the `medal` success of the test data.
+Hint: look into `predict(model, new_data, type = "response").
+
+Display the predicted values of `medal` with each model alongside the
+true values for the first 5 rows of the test data
+
+### Answer II.2.5
+
+```{r QII.2.5-code}
+# Write your code here
+```
+
+## Question II.2.6 (1 mark)
+
+Using a threshold of 0.5, make the confusion matrices for each model.
+You can present these as the output of the `table()` function. 
+
+### Answer II.2.6
+
+```{r QII.2.6-code}
+# Write your code here
+
+```
+
+
+## Question II.2.7 (2 marks)
+
+Now, iterating over 40 different values of the threshold between 0 and 1, 
+compute the True Positive Rates (TPR) and False Positive Rates (FPR) for each
+model over the test dataset. 
+
+Plot these in the form of a receiver operating characteristic (ROC) curve for each model.
+
+What do the ROC curves say about the performance of the two models?
+
+### Answer II.2.7
+
+```{r QII.2.7-code}
+# Write your code here
+
+```
+
+```{asis QII.2.7-text}
+Write your response here in plain text
+
+```
+
+# Question II.3 Predicting medal success using caret (8 marks)
+
+We will now attempt the classification problem using tree-based models
+using the `Caret` package, and compare them to our logistic regression
+results.
+
+## Question II.3.1 (1 mark)
+
+First, we need to re-define the factor levels for the `medal` variable. 
+Remember that in caret, the convention is reversed compared to the `glm` convention. 
+We need the levels to have the success event (`yes`) as the first entry
+and the failure (`yes`) event as the second entry.
+
+Relevel the `medal` column to have factors with levels `c("yes", "no')`.
+Save your new relevelled tibble as `sports_data_caret` and make sure you use
+this dataset for the following questions.
+
+To confirm that you have the result, check the order on your medals column with
+```
+levels(sports_data_caret$medal)
+```
+
+Hint: look into `relevel()`. 
+
+
+### Answer II.3.1
+
+```{r QII.3.1-code}
+# Write your code here
+
+# Uncomment the following to run check
+# levels(sports_data_caret$medal)
+```
+
+
+## Question II.3.2 (1 mark)
+
+Again with `createDataPartition` partition the `sports_data_caret` dataset 
+into a training and testing dataset. Use 80% of the data as training and 20% of the data as test. 
+
+**Note**: if you're rewriting the partitioning code here, set the random seed
+to 111 again for reproducibility using `set.seed(111)`.
+
+### Answer II.3.2 
+
+
+```{r QII3.2-code}
+set.seed(111)
+
+# Write your code here
+
+```
+
+## Question II.3.3 (1 mark)
+
+Fit a logistic regression model in `caret` using all variables as
+predictors for `medal`. 
+
+Make sure to only use the training data.
+
+For reproducibility, set the seed to 111 before any training.
+
+### Answer II.3.3
+
+```{r QII.3.3-code}
+set.seed(111)
+
+# Write your code here
+
+```
+
+## Question II.3.4 (1 mark)
+
+Train a decision tree using the `rpart` method with all variables as
+predictors for `medal`. Make sure to only use the training data.
+
+For the training control, use the following settings
+
+- Do 10-fold cross validation
+- Use the ROC metric for cross validation
+
+For reproducibility, set the random seed to 111 before training.
+
+### Answer II.3.4
+
+```{r QII.3.4-code}
+set.seed(111)
+
+# write your code here
+
+```
+
+## Question II.3.5 (1 mark)
+
+Using `rpart.plot`, visualise the final decision tree. 
+Based on the plot, which variables did the decision tree identify as being important?
+
+
+### Answer II.3.5
+
+```{r QII.3.5-code}
+# Write your code here
+```
+
+
+```{asis QII.3.5-text}
+Write your response here in plain text
+```
+
+## Question II.3.6 (1 mark)
+
+Now train a random forest using the `rf` method with all variables as
+predictors for `medal`. Make sure to only use the training data.
+
+For the training control, use the same settings as the decision tree:
+
+- Do 10-fold cross validation
+- Use the ROC metric for cross validation
+
+For reproducibility, set the random seed to 111 before training.
+
+### Answer II.3.6 
+
+```{r QII.3.6-code}
+set.seed(111)
+
+# Write your code here
+
+```
+
+## Question II.3.7 (2 marks)
+
+For each of the models from above, i.e., the logistic regression model, 
+the decision tree, and the random forest, compute their accuracies and the 
+areas under the ROC curve (ROC AUC) using the testing dataset.
+
+Compare and contrast the three models in terms of their performance (accuracy and AUC)
+and their interpretability. 
+
+### Answer II.3.7
+
+```{r QII.3.7-code}
+# Write your code here
+
+```
+
+```{asis QII.3.7-text}
+Write your response here in plain text.
+
+```
+
+# Question II.4 Ethical considerations of performance classification (4 marks)
+
+Suppose that as a sports data scientist, you are tasked with classifying the
+performance potentials of young athletes based on their current measurements
+(not too dissimilar to what you just did in the previous questions). 
+
+What are the potential ethical issues with this technology? Answer this question 
+by identifying two possible stakeholders and two ethically-significant benefits
+and harms. 
+
+
+### Answer II.4
+
+```{asis QII.4-text}
+Write your response here in plain text.
+```
+
+# Question II.5 (1 mark): Working reproducibly
+
+Follow the reproducible practices covered in the unit (see the Unit Canvas page on this topic and the recommended textbook). 
+
+Your submission must:
+
+- have a separate file for each part 
+  (this is part II, so it should be named `Assessment02_Part2.Rmd`)
+- render to HTML without error by the Teaching Team;
+- use clear code, informative comments, and readable plots;
+- avoid hidden dependencies and hard-coded local paths.
+
+------------------------------------------------------------------------
+
+# End of part II
