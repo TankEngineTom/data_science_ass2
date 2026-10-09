@@ -288,16 +288,25 @@ State both answers in terms of their site ID and suburb.
 
 ```{r QI.2.1-code}
 
-max_value = max(fuel_prices$price, na.rm=TRUE) 
-sprintf("Max price: %i", max_value)
+fuel_prices %>% 
+  filter(fuel_type == "Unleaded", site_state == "QLD") %>%
+  filter(price == max(price, na.rm=TRUE)) %>%
+  select(site_id, site_suburb) -> result
+sprintf("ID and suburb for petrol station with the highest unleaded price in QLD - ID: %s, Suburb: %s", result$site_id, result$site_suburb)
 
-max_value = max(fuel_prices$price, na.rm=TRUE) 
-sprintf("Max price: %i", max_value)
+fuel_prices %>% 
+  filter(fuel_type == "Diesel", site_state == "QLD") %>%
+  filter(price == min(price, na.rm=TRUE)) %>%
+  select(site_id, site_suburb) -> result
+sprintf("ID and suburb for petrol station with the lowest disel price in QLD - ID: %s, Suburb: %s", result$site_id, result$site_suburb)
 
 ```
 
 ```{asis QI.2.1-text}
-Write your response here in plain text
+
+ID and suburb for petrol station with the highest unleaded price in QLD - ID: 61470335, Suburb: Bamaga
+
+ID and suburb for petrol station with the lowest disel price in QLD - ID: 61478254, Suburb: Cardwell
 
 ```
 
@@ -320,10 +329,27 @@ tendency and spread in two or three sentences.
 ```{r Q2.2}
 # Write your code here 
 
+result <- list()
+for (brand in unique(fuel_prices$site_brand)) {
+    fuel_prices %>% 
+      filter(site_brand == brand, fuel_type == "Unleaded") %>%
+      pull(price) -> indiv
+  
+  result[[brand]] <- c(
+    Mean_value = mean(indiv, na.rm = TRUE),
+    SD = sd(indiv, na.rm = TRUE),
+    Q1 = quantile(indiv, 0.25, na.rm = TRUE, names = FALSE),
+    Med = median(indiv, na.rm = TRUE),
+    Q3 = quantile(indiv, 0.75, na.rm = TRUE, names = FALSE)
+  )
+}
+print(result)
+
 ```
 
 ```{asis QI.2.2-text}
-Write your response here in plain text
+Velora, AG 
+AG and Velora had
 
 ```
 
@@ -338,7 +364,15 @@ bins/binwidth settings and find an appropriate one for this dataset
 ### Answer I.2.3
 
 ```{r QI.2.3-code}
-# Write your code here
+unleaded_filtered <- fuel_prices %>%
+  filter(fuel_type == "Unleaded")
+
+ggplot(data = unleaded_filtered, aes(x = price)) + 
+  geom_histogram() + 
+  facet_wrap(~ site_brand) + 
+    labs()
+  
+
 
 ```
 
@@ -353,6 +387,10 @@ of the jitter as to not obscure the violin plot.
 
 ```{r QI.2.4-code}
 # Write your code here 
+ggplot(data = fuel_prices, aes(x = price, y = fuel_type)) + 
+  geom_jitter() +
+  geom_violin()
+
 
 ```
 
@@ -367,6 +405,8 @@ price entries?
 ```{r QI.2.5-code}
 # Write your code here
 
+fuel_prices %>%
+  filter(price > 200) 
 ```
 
 ```{asis QI.2.5-text}
