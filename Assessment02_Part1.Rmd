@@ -568,8 +568,8 @@ Show a `summary()` for the model.
 ### Answer I.4.1
 
 ```{r QI.4.1-code}
-# Write your code here
-
+diesel_model <- lm(Diesel ~ Unleaded, data = fuel_type_wide)
+summary(diesel_model)
 ```
 
 ## Question I.4.2 (1 mark)
@@ -597,7 +597,8 @@ Write your response here in plain text
 ### Answer I.4.3
 
 ```{r QI.4.3-code}
-# Write your code here
+qqnorm(residuals(diesel_model))
+qqline(residuals(diesel_model))
 
 ```
 

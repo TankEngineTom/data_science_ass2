@@ -403,7 +403,9 @@ partitioning using `set.seed(111)`
 
 ```{r QII.2.3-code}
 set.seed(111)
-trainingIndex <- CreateDataPartition(sports_data$target, p=0.8, list = FALSE)
+trainingIndex <- createDataPartition(sports_data$medal, p=0.8, list = FALSE)
+training_split <- sports_data[trainingIndex, ]
+testing_split <- sports_data[-trainingIndex, ]
 
 ```
 
@@ -422,7 +424,13 @@ And print out their summaries.
 ### Answer II.2.4
 
 ```{r QII.2.4}
-# Write your code here 
+# model 1 - using just the three select variables
+selected_model1 <- glm(medal ~ vertical_jump + upper_body_strength + hand_grip, data = training_split, family = binomial)
+summary(selected_model1)
+
+# model 2 - using all variables as predictors
+full_model1 <- glm(medal ~ sex + bone_age + height + body_weight + fat_mass + lean_mass + bone_mineral_density + bone_mineral_content + years_from_phv + vertical_jump + upper_body_strength + hand_grip, data = training_split, family = binomial)
+summary(full_model1)
 
 ```
 
@@ -438,7 +446,23 @@ true values for the first 5 rows of the test data
 ### Answer II.2.5
 
 ```{r QII.2.5-code}
-# Write your code here
+prob_select1 <- predict(selected_model1, newdata = testing_split, type = "response")
+prob_full1 <- predict(full_model1, newdata = testing_split, type = "response")
+
+selected_class <- ifelse(prob_select1 >= 0.5, "yes", "no") 
+selected_class <- factor(selected_class, levels = c("no", "yes"))
+
+full_class <- ifelse(prob_full1 >= 0.5, "yes", "no")
+full_class <- factor(full_class, levels = c("no", "yes"))
+
+### comparision and display 
+# generate dataframe to print side by side comparison
+results <- data.frame(
+  actual_medal = testing_split$medal,
+  reduced_model_prediction = selected_class,
+  full_model_prediction = full_class
+)
+head(results, 5)
 ```
 
 ## Question II.2.6 (1 mark)
@@ -449,8 +473,12 @@ You can present these as the output of the `table()` function.
 ### Answer II.2.6
 
 ```{r QII.2.6-code}
-# Write your code here
-
+# CM for model 1 - using selected features
+cm1 <- confusionMatrix(data = selected_class, reference = testing_split$medal, positive = "yes")
+print(cm1)
+# CM for model 2 - using all predictors
+cm2 <- confusionMatrix(data = full_class, reference = testing_split$medal, positive = "yes")
+print(cm2)
 ```
 
 ## Question II.2.7 (2 marks)
@@ -467,8 +495,34 @@ What do the ROC curves say about the performance of the two models?
 ### Answer II.2.7
 
 ```{r QII.2.7-code}
-# Write your code here
+# seq to make fractional thresholds
+scales <- seq(0, 1, length = 40)
 
+# TPR AND FPR pre set to size 40
+tpr_select <- numeric(length(scales))
+fpr_select <- numeric(length(scales))
+tpr_full <- numeric(length(scales))
+fpr_full <- numeric(length(scales))
+
+genuine <- testing_split$medal == "yes"
+base <- sum(genuine)
+base_exclusive <- sum(!genuine)
+for (i in 1:40) {
+  indiv <- scales[i]
+  #reduced model
+  pred_select <- prob_select1 >= indiv
+  tpr_select[i] <- sum(pred_select & genuine) / base
+  fpr_select[i] <- sum(pred_select  & !genuine) / base_exclusive
+  
+  # full model
+  pred_full <- prob_full1 >= indiv
+  tpr_full[i] <- sum(pred_full  & genuine) / base
+  fpr_full[i] <- sum(pred_full  & !genuine) / base_exclusive
+}
+plot(x = fpr_select, y = tpr_select, main = "ROC curve for select and full logistic model", xlab = "False Positive Rate", ylab = "True Positive Rate", col = "red", type = "l", xlim = c(0,1), ylim = c(0,1), lwd=2)
+lines(fpr_full, tpr_full, col = "blue", lwd=2)
+abline(a = 0, b = 1, col = "black", lty=2)
+legend("bottomright", legend = c("reduced model", "full predictor model"), col = c("red", "blue"), lwd = 2)
 ```
 
 ```{asis QII.2.7-text}
@@ -505,10 +559,10 @@ Hint: look into `relevel()`.
 ### Answer II.3.1
 
 ```{r QII.3.1-code}
-# Write your code here
-
-# Uncomment the following to run check
-# levels(sports_data_caret$medal)
+sports_data_caret <- sports_data %>% 
+  mutate(medal = factor(medal, levels = c("yes", "no")))
+# confirmed to work
+levels(sports_data_caret$medal)
 ```
 
 ## Question II.3.2 (1 mark)
@@ -524,9 +578,9 @@ seed to 111 again for reproducibility using `set.seed(111)`.
 
 ```{r QII3.2-code}
 set.seed(111)
-
-# Write your code here
-
+trainingIndex <- createDataPartition(sports_data_caret$medal, p=0.8, list = FALSE)
+training_split <- sports_data_caret[trainingIndex, ]
+testing_split <- sports_data_caret[-trainingIndex, ]
 ```
 
 ## Question II.3.3 (1 mark)
@@ -543,8 +597,8 @@ For reproducibility, set the seed to 111 before any training.
 ```{r QII.3.3-code}
 set.seed(111)
 
-# Write your code here
-
+logistic_model <- train(medal~., data = training_split, method = "glm", family = "binomial")
+print(logistic_model)
 ```
 
 ## Question II.3.4 (1 mark)
@@ -563,9 +617,13 @@ For reproducibility, set the random seed to 111 before training.
 
 ```{r QII.3.4-code}
 set.seed(111)
+# cross validation with 10 fold settings
+cross_v <- trainControl(method="cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
 
-# write your code here
+#train using all columns except medal, using rpart method
+dt_model <- train(medal~., data = training_split, method="rpart", trControl = cross_v, metric="ROC")
 
+dt_model
 ```
 
 ## Question II.3.5 (1 mark)
@@ -576,11 +634,11 @@ plot, which variables did the decision tree identify as being important?
 ### Answer II.3.5
 
 ```{r QII.3.5-code}
-# Write your code here
+rpart.plot(dt_model$finalModel, main = "Decision Tree for predicting medal")
 ```
 
 ```{asis QII.3.5-text}
-Write your response here in plain text
+According to the plot, vertical_jump was the most important variable, as it serves as the root node of the decision tree. The tree does an initial branch at vertical jump at or above 38. Then, *upper body strength* was the second most important, used to refine the vertical jump classification, on the left branch of the tree.  
 ```
 
 ## Question II.3.6 (1 mark)
@@ -600,8 +658,7 @@ For reproducibility, set the random seed to 111 before training.
 ```{r QII.3.6-code}
 set.seed(111)
 
-# Write your code here
-
+rf_model <- train(medal~., data = training_split, method = "rf", trControl = cross_v, metric = "ROC")
 ```
 
 ## Question II.3.7 (2 marks)
@@ -616,12 +673,101 @@ Compare and contrast the three models in terms of their performance
 ### Answer II.3.7
 
 ```{r QII.3.7-code}
-# Write your code here
+### logistic model predictions and probabilities 
+log_pred <- predict(logistic_model, newdata = testing_split)
+log_prob <- predict(logistic_model, newdata = testing_split, type = "prob")
 
+# calculate accuracy
+log_acc <- confusionMatrix(
+  log_pred, testing_split$medal
+)
+accuracy_log <- log_acc$overall["Accuracy"]
+print(accuracy_log)
+
+#create df
+eval_df <- data.frame(
+  obs = testing_split$medal,
+  pred = log_pred,
+  log_prob
+)
+
+# ROC AUC, 
+log_figs <- twoClassSummary(
+  eval_df,
+  lev = levels(testing_split$medal)
+)
+
+print(log_acc)
+print(log_figs["ROC"])
+
+### DT predictions and probabilities 
+dt_pred <- predict(dt_model, newdata = testing_split)
+dt_prob <- predict(dt_model, newdata = testing_split, type = "prob")
+
+# calculate accuracy
+dt_acc <- confusionMatrix(
+  dt_pred, testing_split$medal
+)
+accuracy_dt <- dt_acc$overall["Accuracy"]
+print(accuracy_dt)
+
+#create df
+eval_df <- data.frame(
+  obs = testing_split$medal,
+  pred = dt_pred,
+  dt_prob
+)
+
+# ROC AUC, 
+dt_figs <- twoClassSummary(
+  eval_df,
+  lev = levels(testing_split$medal)
+)
+
+print(dt_acc)
+print(dt_figs["ROC"])
+
+### RF predictions and probabilities 
+rf_pred <- predict(rf_model, newdata = testing_split)
+rf_prob <- predict(rf_model, newdata = testing_split, type = "prob")
+
+# calculate accuracy
+rf_acc <- confusionMatrix(
+  rf_pred, testing_split$medal
+)
+accuracy_rf <- rf_acc$overall["Accuracy"]
+print(accuracy_rf)
+
+#create df
+eval_df <- data.frame(
+  obs = testing_split$medal,
+  pred = rf_pred,
+  rf_prob
+)
+
+# ROC AUC, 
+rf_figs <- twoClassSummary(
+  eval_df,
+  lev = levels(testing_split$medal)
+)
+
+print(rf_acc)
+print(rf_figs["ROC"])
+
+model_metrics <- data.frame(
+  model = c("Logistic Regression", "Decision Tree", "Random Forest"),
+  accuracy = c(as.numeric(accuracy_log), as.numeric(accuracy_dt), as.numeric(accuracy_rf)),
+  ROC_AUC = c(as.numeric(log_figs["ROC"]), as.numeric(dt_figs["ROC"]), as.numeric(rf_figs["ROC"]))
+)
+print(model_metrics, digits = 5)
 ```
 
 ```{asis QII.3.7-text}
-Write your response here in plain text.
+
+The performance of the logistic model and random forest was very similar, on ROC AUC, while decision was the lowest (0.88811, 0.87587, 0.72727 respectively). Accuracy didnt show much insight into model anlysis because the values were near identical as evident from the dataframe output.
+
+Logistic model is the most interpetable because each predictor value is assigned with a coefficient. Decision tree is interpetable and simple but can get complex as braches get deeper. Random forest is the least interpretable because adding and averaging across many decision trees adds complexity. 
+
 
 ```
 
